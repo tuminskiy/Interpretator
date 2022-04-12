@@ -2,6 +2,12 @@
 
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "util.hpp"
+
+#include <regex>
+#include <iostream>
+
+using namespace std;
 
 const std::string MainWindow::m_format =
   "<b>Язык</b> = \"Начало\" Определения Опер ... Опер \"Конец\"<br>"
@@ -47,26 +53,67 @@ MainWindow::MainWindow(QWidget* parent)
 
 void MainWindow::on_clicked_run()
 {
-  const auto programm = m_ui.teInput->toPlainText().toStdString();
+  auto programm = m_ui.teInput->toPlainText().toStdString();
 
   if (programm.empty())
     return;
 
-  const auto tokens = Lexer::tokenize(programm);
+  auto tokens = Lexer::tokenize(programm);
   const auto analyze = Lexer::analyze(tokens);
 
   if (!analyze.success) {
     QString msg;
-
+    /*
     if (analyze.token_it != tokens.end()) {
       std::visit([&msg](const TokenBase& token) mutable {
         msg += QString::fromStdString("Встречен токен: " + std::string{ token.token() });
       }, *analyze.token_it);
     }
-
+    */
     msg += "\n" + QString::fromStdString(analyze.msg);
 
     m_ui.tbOutput->setText(msg);
+
+    auto token = Util::get_token(*analyze.token_it);
+
+    auto aa = tokens.begin();
+
+    auto n = 0;
+
+    while (aa++ != analyze.token_it) {
+      if (Util::get_token(*aa) == token)
+        ++n;
+    }
+    
+    auto ppp = 0;
+    while (n != 0) {
+      ppp = programm.find(token, ppp);
+      --n;
+    }
+
+
+    auto beg = tokens.begin();
+
+    for (int i = 0; i < n; ) {
+      if (Util::get_token(*beg) == token) {
+        ++i;
+      }
+      ++beg;
+    }
+    
+    auto nnn = static_cast<int>(aa - tokens.begin());
+
+    std::cout << nnn << '\n';
+
+    auto index = programm.find(token, ppp + 1);
+
+    programm.replace(index, token.size(), "<font color=\"red\">" + std::string{token} + "</font>");
+
+    std::regex rg("\n");
+    auto str = std::regex_replace(std::string{programm}, rg, "<br>");
+
+    m_ui.teInput->setHtml(QString::fromStdString(str));
+
     return;
   }
 

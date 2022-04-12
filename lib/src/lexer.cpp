@@ -66,6 +66,13 @@ Lexer::AnalyzeResult Lexer::analyze_langugage(It first, It last)
   if (!result.success)
     return result;
 
+  if (Util::get_token(*result.token_it) == ":") {
+    result.success = false;
+    result.msg = "Перед знаком ':' должна идти метка, "
+                 "либо операция должна заканчиваться переменной или целым числом";
+    return result;
+  }
+
   if (result.token_it == last || !Util::is_expected_token<text_index>(*result.token_it, "Конец")) {
     result.success = false;
     result.msg = "Язык должен заканчиватся словом 'Конец'";
@@ -241,7 +248,7 @@ Lexer::AnalyzeResult Lexer::analyze_operation(It first, It last)
 
   if (first->index() != integer_index) {
     result.success = false;
-    result.msg = "Ожидается метка";
+    result.msg = "После 'Конец " + std::string{ Util::get_token(*std::prev(first)) } + "' ожидается метка";
     result.token_it = first;
     return result;
   }
@@ -292,7 +299,7 @@ Lexer::AnalyzeResult Lexer::analyze_variable(It first, It last)
 
   if (first == last || first->index() != text_index) {
     result.success = false;
-    result.msg = "После метки ожидается переменная";
+    result.msg = "После ':' должна идти переменная";
     return result;
   }
 
@@ -318,14 +325,14 @@ Lexer::AnalyzeResult Lexer::analyze_right_part(It first, It last)
 
   if (first == last) {
     result.success = false;
-    result.msg = "После переменной ожидается знак '='";
+    result.msg = "После переменной должен идти знак '='";
     result.token_it = first;
     return result;
   }
 
   if (!Util::is_expected_token<text_index>(*first, "=")) {
     result.success = false;
-    result.msg = "После переменной ожидается знак '='";
+    result.msg = "После переменной должен идти знак '='";
     result.token_it = first;
     return result;
   }
@@ -334,7 +341,7 @@ Lexer::AnalyzeResult Lexer::analyze_right_part(It first, It last)
 
   if (first == last) {
     result.success = false;
-    result.msg = "После знака '=' ожидается либо переменная, "
+    result.msg = "После знака '=' должно идти либо переменная, "
                  "либо целое число, либо знак '-' , "
                  "либо знак '!' , либо функция";
     result.token_it = first;
@@ -346,14 +353,11 @@ Lexer::AnalyzeResult Lexer::analyze_right_part(It first, It last)
   if (!result.success && result.from_func) {
     auto prev_token = *std::prev(result.token_it);
 
-    if (Util::is_operator(prev_token)) {
-      result.msg = "После знака '" + std::string{Util::get_token(prev_token)} + "' ожидается либо переменная, "
-                   "либо целое число, "
-                   "либо знак '!', либо функция";
-    } else {
-      result.msg = "После знака '" + std::string{Util::get_token(prev_token)} + "' ожидается либо переменная, "
-                   "либо целое число, либо знак '-', "
-                   "либо знак '!' , либо функция";
+
+    if (Util::is_operator(prev_token) && Util::is_operator(*result.token_it)) {
+      result.msg = "Ошибка: встречено два оператора подряд "
+      "'" + std::string{Util::get_token(prev_token)} + "' и "
+      "'" + std::string{Util::get_token(*result.token_it)} + "'";
     }
   }
 
@@ -370,10 +374,11 @@ Lexer::AnalyzeResult Lexer::analyze_additional(It first, It last)
   if (Util::is_expected_token<text_index>(*first, "-")) {
     ++first;
     has_minus = true;
+
     if (first == last) {
       result.success = false;
       result.token_it = first;
-      result.msg = "После знака '-' ожидается либо переменная, "
+      result.msg = "После знака '-' должно идти либо переменная, "
                    "либо целое число, либо знак '!', либо функция";
       return result;
     }
@@ -382,15 +387,9 @@ Lexer::AnalyzeResult Lexer::analyze_additional(It first, It last)
   if (Util::is_operator(*first) && std::get<TokenText>(*first).token() != "!") {
     result.success = false;
     result.token_it = first;
-
-    if (!has_minus) {
-      result.msg = "После знака '" + std::string{Util::get_token(*std::prev(first))} + "' ожидается либо переменная, "
-                   "либо целое число, либо знак '-', либо знак '!', либо функция";
-    } else {
-      result.msg = "После знака '" + std::string{Util::get_token(*std::prev(first))} + "' ожидается либо переменная, "
-                   "либо целое число, либо знак '!', либо функция";
-    }
-
+    result.msg = "Ошибка: встреченно два оператора подряд "
+      "'" + std::string{Util::get_token(*std::prev(first))} + "' и "
+      "'" + std::string{Util::get_token(*first)} + "'";
 
     return result;
   }
@@ -410,7 +409,7 @@ Lexer::AnalyzeResult Lexer::analyze_additional(It first, It last)
       if (first == last) {
         result.success = false;
         result.token_it = first;
-        result.msg = "После аддитивной операции ожидается либо переменная, "
+        result.msg = "После аддитивной операции должно идти либо переменная, "
                      "либо целое число, либо функция, либо знак '!'";
       }
     } else {
@@ -441,7 +440,7 @@ Lexer::AnalyzeResult Lexer::analyze_multi(It first, It last)
       if (first == last) {
         result.success = false;
         result.token_it = first;
-        result.msg = "После мультипликативной операции ожидается либо переменная, "
+        result.msg = "После мультипликативной операции должно идти либо переменная, "
                      "либо целое число, либо функция, либо знак '!'";
       }
     } else {
@@ -465,12 +464,33 @@ Lexer::AnalyzeResult Lexer::analyze_logic(It first, It last)
   if (first == last) {
     result.success = false;
     result.token_it = first;
-    result.msg = "После знака '!' ожидается либо функция, "
+    result.msg = "После знака '!' должно идти либо функция, "
                  "либо переменна, либо целое число";
     return result;
   }
 
+  if (Util::get_token(*first) == "!") {
+    result.success = false;
+    result.token_it = first;
+    result.msg = "После знака '" + std::string{Util::get_token(*std::prev(first))} + "' должно идти либо переменная, "
+                "либо целое число, либо функция";
+
+
+    return result;
+  }
+
   while (result.success) {
+    if (Util::is_expected_token<text_index>(*first, "!"))
+      first++;
+
+    if (first == last) {
+      result.success = false;
+      result.token_it = first;
+      result.msg = "После знака '!' должно идти либо функция, "
+                 "либо переменна, либо целое число";
+      return result;
+    }
+
     result = analyze_func(first, last);
     first = result.token_it;
 
@@ -484,7 +504,7 @@ Lexer::AnalyzeResult Lexer::analyze_logic(It first, It last)
       if (first == last) {
         result.success = false;
         result.token_it = first;
-        result.msg = "После логической операции ожидается либо переменная, "
+        result.msg = "После логической операции должно идти либо переменная, "
                      "либо целое число, либо функция";
       }
     } else {

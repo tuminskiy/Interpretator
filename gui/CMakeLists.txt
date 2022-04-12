@@ -6,9 +6,10 @@ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 set(SRC
   src/main.cpp
   include/mainwindow.hpp src/mainwindow.cpp
+  ui/mainwindow.ui
 )
 
-set(UI ui/mainwindow.ui)
+#set(UI ui/mainwindow.ui)
 
 if (${QT_VERSION_MAJOR} GREATER_EQUAL 6)
   qt_add_executable(gui)
@@ -29,7 +30,7 @@ set_target_properties(gui PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin/release
 )
 
-qt_wrap_ui(UI_HEADERS ${UI})
+#qt_wrap_ui(UI_HEADERS ${UI})
 
 target_include_directories(gui PRIVATE include ${CMAKE_BINARY_DIR}/gui)
 

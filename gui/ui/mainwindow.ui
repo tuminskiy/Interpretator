@@ -18,12 +18,15 @@
     <item>
      <layout class="QHBoxLayout" name="HL_INPUT_FORMAT">
       <item>
-       <widget class="QPlainTextEdit" name="teInput">
+       <widget class="QTextBrowser" name="teInput">
         <property name="font">
          <font>
-          <family>Tahoma</family>
-          <pointsize>14</pointsize>
+          <family>Ubuntu</family>
+          <pointsize>16</pointsize>
          </font>
+        </property>
+        <property name="readOnly">
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -87,7 +90,7 @@
      <x>0</x>
      <y>0</y>
      <width>1276</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
   </widget>
